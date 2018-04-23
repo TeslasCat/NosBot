@@ -1,0 +1,18 @@
+{
+	"server":"irc.macak.co.uk",
+	"channels":["#test"],
+	"nick":"TestBot",
+	"user":"TestBot",
+	"nickserv":"password",
+
+	"debug": false,
+	"port": 6697,
+	"secure": true,
+	
+	"admin": ["admin"],
+
+	"wordnik_api": "api_key",
+
+	"greeting": ["Konnichiwa", "Welcome", "Hello"],
+	"greeting-ignore": ["GitBot"]
+}
