@@ -19,6 +19,7 @@ type Config struct {
 	Debug          bool     `json:"debug"`
 	Port           int      `json:"port"`
 	Secure         bool     `json:"secure"`
+	SkipVerify     bool     `json:"skipVerify"`
 	Admin          []string `json:"admin"`
 	WordnikAPI     string   `json:"wordnik_api"`
 	Greeting       []string `json:"greeting"`

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"github.com/lrstanley/girc"
+	"crypto/tls"
 )
 
 func main() {
@@ -17,8 +18,7 @@ func main() {
 		log.Printf("Printing Configuration file: \n%+v\n", c)
 	}
 
-	os.Exit(3)
-
+	//  Configure connection
 	client := girc.New(girc.Config{
 		Server: c.Server,
 		Port:   c.Port,
@@ -26,19 +26,22 @@ func main() {
 		User:   c.User,
 		Debug:  os.Stdout,
 		SSL: 	c.Secure,
+		TLSConfig: &tls.Config{InsecureSkipVerify: c.SkipVerify},
 	})
 
+	// Handlers
 	client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
 	    c.Cmd.Join("#test")
 	})
 
 	client.Handlers.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
-	    if strings.HasPrefix(e.Trailing, "!hello") {
-	        c.Cmd.ReplyTo(e, girc.Fmt("{b}hello{b} {blue}world{c}!"))
-	        return
-	    }
+		switch {
+			case strings.HasPrefix(e.Trailing, "!hello"):
+				msgHello(c, e)
+		}
 	})
 
+	// Connect to server
 	for {
 	    if err := client.Connect(); err != nil {
 	        log.Printf("error: %s", err)
@@ -49,4 +52,9 @@ func main() {
 	        return
 	    }
 	}
+}
+
+func msgHello (c *girc.Client, e girc.Event) {
+	c.Cmd.ReplyTo(e, girc.Fmt("{b}hello{b} {blue}world{c}!"))
+	return
 }
