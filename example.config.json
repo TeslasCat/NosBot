@@ -8,7 +8,7 @@
 	"debug": false,
 	"port": 6697,
 	"secure": true,
-	"skipVerify": true,
+	"skipVerify": false,
 	
 	"admin": ["admin"],
 
