@@ -36,8 +36,7 @@ func loadConfig() Config {
 
 	file, err := os.Open(configFile)
 	if err != nil {
-		log.Printf("Error Loading Configuration (%s): %s", configFile, err)
-		os.Exit(1)
+		log.Fatalf("Error Loading Configuration (%s): %s", configFile, err)
 	}
 
 	defer file.Close()
@@ -46,34 +45,29 @@ func loadConfig() Config {
 	configuration := Config{}
 	err = decoder.Decode(&configuration)
 	if err != nil {
-		log.Printf("Error Decoding Configuration (%s): %s", configFile, err)
-		os.Exit(1)
+		log.Fatalf("Error Decoding Configuration (%s): %s", configFile, err)
 	}
 
 	// Check Bot Names.
 	if !girc.IsValidNick(configuration.Nick) {
-		log.Printf("Not a valid Nick:", configuration.Nick)
-		os.Exit(1)
+		log.Fatalf("Not a valid Nick:", configuration.Nick)
 	}
 
 	if !girc.IsValidNick(configuration.User) {
-		log.Printf("Not a valid User:", configuration.User)
-		os.Exit(1)
+		log.Fatalf("Not a valid User:", configuration.User)
 	}
 
 	// Check Admins nicks
 	for _, admins := range configuration.Admin {
 		if !girc.IsValidNick(admins) {
-			log.Printf("Not a valid admin Nick:", admins)
-			os.Exit(1)
+			log.Fatalf("Not a valid admin Nick:", admins)
 		}
 	}
 
 	// Check Channels
 	for _, channels := range configuration.Channels {
 		if !girc.IsValidChannel(channels) {
-			log.Printf("Not a valid Channel:", channels)
-			os.Exit(1)
+			log.Fatalf("Not a valid Channel:", channels)
 		}
 	}
 
