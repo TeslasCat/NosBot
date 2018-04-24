@@ -34,16 +34,19 @@ func loadConfig() Config {
 		configFile = "config.json"
 	}
 
-	file, _ := os.Open(configFile)
-	defer file.Close()
+	file, err := os.Open(configFile)
+	if err != nil {
+		log.Printf("Error Loading Configuration (%s): %s", configFile, err)
+		os.Exit(1)
+	}
 
+	defer file.Close()
 	decoder := json.NewDecoder(file)
 
 	configuration := Config{}
-	err := decoder.Decode(&configuration)
-
+	err = decoder.Decode(&configuration)
 	if err != nil {
-		log.Printf("Error loading configuration (%s): %s", configFile, err)
+		log.Printf("Error Decoding Configuration (%s): %s", configFile, err)
 		os.Exit(1)
 	}
 
