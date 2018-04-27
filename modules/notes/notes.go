@@ -37,7 +37,7 @@ func new (message types.Message) types.Response {
 		log.Printf("Notes Module: ", err)
 	}
 	defer db.Close()
-	sqlStmt := `CREATE TABLE IF NOT EXISTS notes (ID INTEGER NOT NULL PRIMARY KEY, Nick TEXT, Timestamp TEXT, Note TEXT);`
+	sqlStmt := `CREATE TABLE IF NOT EXISTS notes (ID INTEGER NOT NULL PRIMARY KEY, Nick TEXT, Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, Note TEXT);`
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		log.Printf("Notes Module: %q: %s\n", err, sqlStmt)
@@ -47,7 +47,7 @@ func new (message types.Message) types.Response {
 
 	n := Note{1, message.Nick, message.Timestamp, message.Message}
 
-	sqlStmt = fmt.Sprintf("INSERT INTO notes(rowid, Nick, Timestamp, Note) VALUES(null,'%s','%s','%s');", n.Nick, n.Timestamp, n.Note)
+	sqlStmt = fmt.Sprintf("INSERT INTO notes(rowid, Nick, Note) VALUES(null,'%s','%s');", n.Nick, n.Note)
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		log.Printf("Notes Module: %q: %s\n", err, sqlStmt)
@@ -68,7 +68,7 @@ func list () types.Response {
 		log.Printf("Notes Module: ", err)
 	}
 
-	rows, err := db.Query("SELECT * FROM notes;")
+	rows, err := db.Query("SELECT ID, Nick, strftime('%d/%m/%Y %H:%M', Timestamp) AS Timestamp, Note FROM notes;")
 	if err != nil {
 		log.Printf("Notes Module: ", err)
 		response.Messages = []string{"{red}No Notes"}
