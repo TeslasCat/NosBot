@@ -9,6 +9,8 @@
 	"port": 6697,
 	"secure": true,
 	"skipVerify": false,
+
+    "modules": ["notes"],
 	
 	"admin": ["admin"],
 
