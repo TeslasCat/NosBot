@@ -4,7 +4,6 @@ import (
 	"../../types"
 	"log"
 	"fmt"
-	"strings"
 	// "time"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
@@ -21,10 +20,9 @@ func Handle (message types.Message) types.Response {
 	var response types.Response
 
 	switch {
-		case strings.HasPrefix(message.Message, "!note"):
-			message.Message = message.Message[6:len(message.Message)]
+		case message.Command == "note":
 			response = new(message)
-		case strings.HasPrefix(message.Message, "!list"):
+		case message.Command == "list":
 			response = list()
 	}
 
@@ -32,7 +30,6 @@ func Handle (message types.Message) types.Response {
 }
 
 func new (message types.Message) types.Response {
-	log.Print("new")
 	response := types.Response{}
 
 	db, err := sql.Open("sqlite3", "./notes.db")
@@ -64,7 +61,6 @@ func new (message types.Message) types.Response {
 }
 
 func list () types.Response {
-	log.Print("list")
 	response := types.Response{}
 
 	db, err := sql.Open("sqlite3", "./notes.db")

@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 	"log"
+	"regexp"
+	"strings"
 	"encoding/json"
 	"crypto/tls"
 	"github.com/lrstanley/girc"
@@ -46,11 +48,30 @@ func main() {
 
 
 	client.Handlers.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
-		message := types.Message{e.Source.Name, "", e.Trailing, e.Timestamp.String(), false}
+		message := types.Message{}
+		message.Nick = e.Source.Name
+		message.Message = e.Trailing
+		message.Timestamp = e.Timestamp.String()
+
 		if len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
 			message.Channel = e.Params[0]
 		} else {
 			message.Private = true
+		}
+
+		// Split out command and arguments
+		regex := regexp.MustCompile(`^!(\S+)(?: (.+))?$`)
+		matches := regex.FindStringSubmatch(message.Message)
+
+		// Extract command
+		if len(matches) > 1 && matches[1] != "" {
+			message.Command = matches[1]
+		}
+
+		// Build arguments list
+		if len(matches) > 2 && matches[2] != "" {
+			message.Message = strings.TrimSpace(matches[2]) // trim command from message
+			message.Arguments = strings.Split(strings.TrimSpace(matches[2]), " ")
 		}
 
 		// Loop loaded modules
@@ -74,10 +95,6 @@ func main() {
 func handleResponse(response types.Response, original types.Message) {
 	if len(response.Messages) == 0 {
 		return
-	}
-
-	if response.Type == "" {
-		response.Type = "message"
 	}
 
 	if response.Target == "" {

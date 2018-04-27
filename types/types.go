@@ -25,6 +25,8 @@ type Message struct {
     Message string
     Timestamp string
     Private bool
+    Command string
+    Arguments []string
 }
 
 type Response struct {
