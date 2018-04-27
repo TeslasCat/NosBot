@@ -30,7 +30,10 @@ func New (c *girc.Client, e girc.Event) {
 		return
 	}
 
-	n := Note{1, e.Source.Name, e.Timestamp.String(), e.Trailing}
+	// String leading command
+	note := e.Trailing[6:len(e.Trailing)]
+
+	n := Note{1, e.Source.Name, e.Timestamp.String(), note}
 
 	sqlStmt = fmt.Sprintf("INSERT INTO notes(rowid, Nick, Timestamp, Note) VALUES(null,'%s','%s','%s');", n.Nick, n.Timestamp, n.Note)
 	_, err = db.Exec(sqlStmt)
@@ -69,7 +72,14 @@ func List (c *girc.Client, e girc.Event) {
 		if err != nil {
 			log.Printf("Notes Module: ", err)
 		}
-		c.Cmd.ReplyTo(e, girc.Fmt(fmt.Sprintf("ID: %d by %s on %s Note: %s", n.ID, n.Nick, n.Timestamp, n.Note)))
+
+		if len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
+			// Reply in channel
+			c.Cmd.Replyf(e, "ID: %d by %s on %s Note: %s", n.ID, n.Nick, n.Timestamp, n.Note)
+	    } else {
+	    	// Reply in PM
+	    	c.Cmd.Messagef(n.Nick, "ID: %d by %s on %s Note: %s", n.ID, n.Nick, n.Timestamp, n.Note)
+	    }
 
 	}
 	err = rows.Err()
