@@ -62,7 +62,7 @@ func List (c *girc.Client, e girc.Event) {
 	rows, err := db.Query("SELECT * FROM notes;")
 	if err != nil {
 		log.Printf("Notes Module: ", err)
-		c.Cmd.ReplyTo(e, girc.Fmt("{red}No Notes"))
+		c.Cmd.ReplyTo(e, "{red}No Notes")
 		return
 	}
 	defer rows.Close()

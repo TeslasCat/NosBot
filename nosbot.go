@@ -21,14 +21,15 @@ func main() {
 
 	//  Configure connection
 	client := girc.New(girc.Config{
-		Server: conf.Server,
-		Port:   conf.Port,
-		Nick:   conf.Nick,
-		User:   conf.User,
-		// Debug:  os.Stdout,
-		// Out: 	os.Stdout,
-		SSL: 	conf.Secure,
-		TLSConfig: &tls.Config{InsecureSkipVerify: conf.SkipVerify},
+		Server: 		conf.Server,
+		Port:   		conf.Port,
+		Nick:   		conf.Nick,
+		User:   		conf.User,
+		// Debug:  		os.Stdout,
+		// Out: 		os.Stdout,
+		SSL: 			conf.Secure,
+		TLSConfig: 		&tls.Config{InsecureSkipVerify: conf.SkipVerify},
+		GlobalFormat:	true,
 	})
 
 	// Handlers
