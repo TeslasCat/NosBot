@@ -9,8 +9,9 @@ import (
 	"crypto/tls"
 	"github.com/lrstanley/girc"
 
-	"./modules/notes"
 	"./types"
+	"./modules/notes"
+	"./modules/replace"
 )
 
 var client *girc.Client
@@ -79,6 +80,11 @@ func main() {
 		for _, module := range conf.Modules {
 			if module == "notes" {
 				response = notes.Handle(message)
+				handleResponse(response, message);
+			}
+
+			if module == "replace" {
+				response = replace.Handle(message)
 				handleResponse(response, message);
 			}
 		}
