@@ -8,7 +8,7 @@ import (
 	"crypto/tls"
 	"github.com/lrstanley/girc"
 
-	"NosBot/modules/notes"
+	"./modules/notes"
 )
 
 func main() {
