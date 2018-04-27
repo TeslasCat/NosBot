@@ -40,7 +40,13 @@ func New (c *girc.Client, e girc.Event) {
 		return
 	}
 
-	c.Cmd.ReplyTo(e, girc.Fmt(fmt.Sprintf("ID: %d by %s on %s Note: %s", n.ID, n.Nick, n.Timestamp, n.Note)))
+	if len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
+		// Reply in channel
+		c.Cmd.Actionf(e.Params[0], "adds note to memory")
+    } else {
+    	// Reply in PM
+    	c.Cmd.Actionf(n.Nick, "adds note to memory")
+    }
 	return
 }
 
