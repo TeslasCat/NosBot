@@ -103,7 +103,7 @@ func LoadConfig() Config {
 		log.Fatalf("Not a valid Nick:", configuration.Nick)
 	}
 
-	if !girc.IsValidNick(configuration.User) {
+	if !girc.IsValidUser(configuration.User) {
 		log.Fatalf("Not a valid User:", configuration.User)
 	}
 
