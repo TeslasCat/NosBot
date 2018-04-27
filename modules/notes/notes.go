@@ -4,6 +4,7 @@ import (
 	"../../types"
 	"log"
 	"fmt"
+	"strconv"
 	// "time"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
@@ -23,7 +24,7 @@ func Handle (message types.Message) types.Response {
 		case message.Command == "note":
 			response = new(message)
 		case message.Command == "list":
-			response = list()
+			response = list(message.Arguments)
 	}
 
 	return response
@@ -60,7 +61,7 @@ func new (message types.Message) types.Response {
 	return response
 }
 
-func list () types.Response {
+func list (arguments []string) types.Response {
 	response := types.Response{}
 
 	db, err := sql.Open("sqlite3", "./notes.db")
@@ -68,7 +69,25 @@ func list () types.Response {
 		log.Printf("Notes Module: ", err)
 	}
 
-	rows, err := db.Query("SELECT ID, Nick, strftime('%d/%m/%Y %H:%M', Timestamp) AS Timestamp, Note FROM notes;")
+	sql := "SELECT ID, Nick, strftime('%d/%m/%Y %H:%M', Timestamp) AS Timestamp, Note FROM notes"
+
+	if len(arguments) > 0 {
+		limit, err := strconv.Atoi(arguments[0]);
+		if (err == nil) {
+			sql += fmt.Sprintf(" ORDER BY Timestamp DESC LIMIT %d ", limit)
+		} else {
+			// Convert argument to date range
+			switch {
+				case arguments[0] == "today":
+					sql += " WHERE Timestamp > datetime('now', 'start of day')"
+				case arguments[0] == "yesterday":
+					sql += " WHERE Timestamp > BETWEEN datetime('now', '-1 days') AND datetime('now', 'start of day')"
+			}
+
+		}
+	}
+
+	rows, err := db.Query(sql)
 	if err != nil {
 		log.Printf("Notes Module: ", err)
 		response.Messages = []string{"{red}No Notes"}
