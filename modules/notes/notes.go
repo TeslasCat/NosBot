@@ -1,10 +1,11 @@
 package notes
 
 import (
+	"../../types"
 	"log"
 	"fmt"
+	"strings"
 	// "time"
-	"github.com/lrstanley/girc"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -16,7 +17,24 @@ type Note struct {
 	Note string
 }
 
-func New (c *girc.Client, e girc.Event) {
+func Handle (message types.Message) types.Response {
+	var response types.Response
+
+	switch {
+		case strings.HasPrefix(message.Message, "!note"):
+			message.Message = message.Message[6:len(message.Message)]
+			response = new(message)
+		case strings.HasPrefix(message.Message, "!list"):
+			response = list()
+	}
+
+	return response
+}
+
+func new (message types.Message) types.Response {
+	log.Print("new")
+	response := types.Response{}
+
 	db, err := sql.Open("sqlite3", "./notes.db")
 	if err != nil {
 		log.Printf("Notes Module: ", err)
@@ -27,33 +45,28 @@ func New (c *girc.Client, e girc.Event) {
 	if err != nil {
 		log.Printf("Notes Module: %q: %s\n", err, sqlStmt)
 		defer db.Close()
-		return
+		return response
 	}
 
-	// String leading command
-	note := e.Trailing[6:len(e.Trailing)]
-
-	n := Note{1, e.Source.Name, e.Timestamp.String(), note}
+	n := Note{1, message.Nick, message.Timestamp, message.Message}
 
 	sqlStmt = fmt.Sprintf("INSERT INTO notes(rowid, Nick, Timestamp, Note) VALUES(null,'%s','%s','%s');", n.Nick, n.Timestamp, n.Note)
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		log.Printf("Notes Module: %q: %s\n", err, sqlStmt)
 		defer db.Close()
-		return
+		return response
 	}
 
-	if len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
-		// Reply in channel
-		c.Cmd.Actionf(e.Params[0], "adds note to memory")
-    } else {
-    	// Reply in PM
-    	c.Cmd.Actionf(n.Nick, "adds note to memory")
-    }
-	return
+	response.Type = "action"
+	response.Messages = []string{"adds to list"}
+	return response
 }
 
-func List (c *girc.Client, e girc.Event) {
+func list () types.Response {
+	log.Print("list")
+	response := types.Response{}
+
 	db, err := sql.Open("sqlite3", "./notes.db")
 	if err != nil {
 		log.Printf("Notes Module: ", err)
@@ -62,9 +75,10 @@ func List (c *girc.Client, e girc.Event) {
 	rows, err := db.Query("SELECT * FROM notes;")
 	if err != nil {
 		log.Printf("Notes Module: ", err)
-		c.Cmd.ReplyTo(e, "{red}No Notes")
-		return
+		response.Messages = []string{"{red}No Notes"}
+		return response
 	}
+
 	defer rows.Close()
 	for rows.Next() {
 		var n Note
@@ -73,17 +87,13 @@ func List (c *girc.Client, e girc.Event) {
 			log.Printf("Notes Module: ", err)
 		}
 
-		if len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
-			// Reply in channel
-			c.Cmd.Replyf(e, "ID: %d by %s on %s Note: %s", n.ID, n.Nick, n.Timestamp, n.Note)
-	    } else {
-	    	// Reply in PM
-	    	c.Cmd.Messagef(n.Nick, "ID: %d by %s on %s Note: %s", n.ID, n.Nick, n.Timestamp, n.Note)
-	    }
-
+		response.Messages = append(response.Messages, fmt.Sprintf("ID: %d by %s on %s Note: %s", n.ID, n.Nick, n.Timestamp, n.Note))
 	}
+
 	err = rows.Err()
 	if err != nil {
 		log.Printf("Notes Module: ", err)
 	}
+	
+	return response
 }

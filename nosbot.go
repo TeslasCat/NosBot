@@ -3,24 +3,26 @@ package main
 import (
 	"os"
 	"log"
-	"strings"
 	"encoding/json"
 	"crypto/tls"
 	"github.com/lrstanley/girc"
 
 	"./modules/notes"
+	"./types"
 )
+
+var client *girc.Client
 
 func main() {
 
-	conf := LoadConfig()
+	conf := loadConfig()
 
 	if conf.Debug {
 		log.Printf("Printing Configuration file: \n%+v\n", conf)
 	}
 
-	//  Configure connection
-	client := girc.New(girc.Config{
+	// Configure connection
+	client = girc.New(girc.Config{
 		Server: 		conf.Server,
 		Port:   		conf.Port,
 		Nick:   		conf.Nick,
@@ -44,11 +46,20 @@ func main() {
 
 
 	client.Handlers.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
-		switch {
-			case strings.HasPrefix(e.Trailing, "!note"):
-				notes.New(c, e)
-			case strings.HasPrefix(e.Trailing, "!list"):
-				notes.List(c, e)
+		message := types.Message{e.Source.Name, "", e.Trailing, e.Timestamp.String(), false}
+		if len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
+			message.Channel = e.Params[0]
+		} else {
+			message.Private = true
+		}
+
+		// Loop loaded modules
+		var response types.Response
+		for _, module := range conf.Modules {
+			if module == "notes" {
+				response = notes.Handle(message)
+				handleResponse(response, message);
+			}
 		}
 	})
 
@@ -60,24 +71,38 @@ func main() {
 	}
 }
 
-// https://mholt.github.io/json-to-go/ <3
-type Config struct {
-	Server         string   `json:"server"`
-	Channels       []string `json:"channels"`
-	Nick           string   `json:"nick"`
-	User           string   `json:"user"`
-	// Nickserv       string   `json:"nickserv"`
-	Debug          bool     `json:"debug"`
-	Port           int      `json:"port"`
-	Secure         bool     `json:"secure"`
-	SkipVerify     bool     `json:"skipVerify"`
-	Admin          []string `json:"admin"`
-	// WordnikAPI     string   `json:"wordnik_api"`
-	// Greeting       []string `json:"greeting"`
-	// GreetingIgnore []string `json:"greeting-ignore"`
+func handleResponse(response types.Response, original types.Message) {
+	if len(response.Messages) == 0 {
+		return
+	}
+
+	if response.Type == "" {
+		response.Type = "message"
+	}
+
+	if response.Target == "" {
+		if original.Private {
+	    	// Reply in PM
+	    	response.Target = original.Nick
+	    } else {
+			// Reply in channel
+			response.Target = original.Channel
+	    }
+	}
+
+	if (response.Type == "action") {
+		for _, message := range response.Messages {
+			client.Cmd.Action(response.Target, message)
+		}
+	} else {
+		for _, message := range response.Messages {
+			client.Cmd.Message(response.Target, message)
+		}
+	}
 }
 
-func LoadConfig() Config {
+
+func loadConfig() types.Config {
 
 	// Use environment variable 'CONF' or default to './config.json'
 	configFile := os.Getenv("CONF")
@@ -93,7 +118,7 @@ func LoadConfig() Config {
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 
-	configuration := Config{}
+	configuration := types.Config{}
 	err = decoder.Decode(&configuration)
 	if err != nil {
 		log.Fatalf("Error Decoding Configuration (%s): %s", configFile, err)
