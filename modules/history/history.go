@@ -2,7 +2,6 @@ package history
 
 import (
     "../../types"
-    "fmt"
 )
 
 
@@ -23,22 +22,10 @@ func init() {
     users = make(map[string]*User)
 }
 
-func Handle (message *types.Message) types.Response {
-    var response types.Response
-
-    if message.Command == "seen" {
-        last, error := GetUserLatest(message.Arguments[0])
-        if error == "" {
-            response.Message = fmt.Sprintf("%s was seen in %s at %s: %s", last.Nick, last.Channel, last.Timestamp, last.Original)
-        } else {
-            response.Message = "{red}" + error
-        }
-    }
-
-
+func Handle (message *types.Message) {
     // Don't record private messages or commands
     if message.Private || message.Replied {
-        return response
+        return
     }
 
     // Update channel history
@@ -52,8 +39,6 @@ func Handle (message *types.Message) types.Response {
         users[message.Nick] = &User{}
     }
     users[message.Nick].Message = message
-
-    return response
 }
 
 func GetUserLatest(nick string) (*types.Message, string) {

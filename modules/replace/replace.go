@@ -4,7 +4,6 @@ import (
     "../../types"
     "regexp"
     "../history"
-    "log"
 )
 
 func Handle (message *types.Message) types.Response {
@@ -24,15 +23,12 @@ func Handle (message *types.Message) types.Response {
         if user == "" {
             subject, error = history.GetChannelLatest(message.Channel)
         } else {
-            log.Print(user)
             subject, error = history.GetUserLatest(user)
         }
 
         if error != "" {
             return response
         }
-
-        log.Printf("Replacing %s", subject.Original)
 
         replaceRegex := regexp.MustCompile(search)
         reply := replaceRegex.ReplaceAllString(subject.Original, replace)

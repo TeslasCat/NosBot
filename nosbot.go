@@ -13,6 +13,7 @@ import (
 	"./modules/notes"
 	"./modules/replace"
 	"./modules/history"
+	"./modules/seen"
 )
 
 var client *girc.Client
@@ -89,11 +90,15 @@ func main() {
 				response = replace.Handle(&message)
 				handleResponse(response, &message)
 			}
+
+			if module == "seen" {
+				response = seen.Handle(&message)
+				handleResponse(response, &message)
+			}
 		}
 
 		// History module is required
-		response = history.Handle(&message)
-		handleResponse(response, &message)
+		history.Handle(&message)
 	})
 
 	// Connect to server
