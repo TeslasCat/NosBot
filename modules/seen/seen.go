@@ -2,9 +2,14 @@ package seen
 
 import (
     "../../types"
+    "../../modules"
     "../history"
     "fmt"
 )
+
+func init () {
+    modules.RegisterModule("seen", Handle)
+}
 
 func Handle (message *types.Message) types.Response {
     var response types.Response

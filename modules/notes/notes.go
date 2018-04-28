@@ -2,6 +2,7 @@ package notes
 
 import (
 	"../../types"
+    "../../modules"
 	"log"
 	"fmt"
 	"strconv"
@@ -15,6 +16,10 @@ type Note struct {
 	Nick string
 	Timestamp string
 	Note string
+}
+
+func init () {
+    modules.RegisterModule("notes", Handle)
 }
 
 func Handle (message *types.Message) types.Response {

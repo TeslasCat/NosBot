@@ -2,9 +2,14 @@ package replace
 
 import (
     "../../types"
+    "../../modules"
     "regexp"
     "../history"
 )
+
+func init () {
+    modules.RegisterModule("replace", Handle)
+}
 
 func Handle (message *types.Message) types.Response {
     var response = types.Response{}

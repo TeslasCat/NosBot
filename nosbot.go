@@ -10,10 +10,11 @@ import (
 	"github.com/lrstanley/girc"
 
 	"./types"
-	"./modules/notes"
-	"./modules/replace"
+	"./modules"
 	"./modules/history"
-	"./modules/seen"
+	_ "./modules/notes"
+	_ "./modules/replace"
+	_ "./modules/seen"
 )
 
 var client *girc.Client
@@ -81,20 +82,8 @@ func main() {
 		// Loop loaded modules
 		var response types.Response
 		for _, module := range conf.Modules {
-			if module == "notes" {
-				response = notes.Handle(&message)
-				handleResponse(response, &message)
-			}
-
-			if module == "replace" {
-				response = replace.Handle(&message)
-				handleResponse(response, &message)
-			}
-
-			if module == "seen" {
-				response = seen.Handle(&message)
-				handleResponse(response, &message)
-			}
+			response = modules.Get(module)(&message)
+			handleResponse(response, &message)
 		}
 
 		// History module is required

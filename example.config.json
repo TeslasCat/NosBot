@@ -10,7 +10,7 @@
 	"secure": true,
 	"skipVerify": false,
 
-    "modules": ["notes", "replace"],
+    "modules": ["notes", "replace", "seen"],
 	
 	"admin": ["admin"],
 
