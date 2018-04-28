@@ -81,7 +81,7 @@ func list (arguments []string) types.Response {
 				case arguments[0] == "today":
 					sql += " WHERE Timestamp > datetime('now', 'start of day')"
 				case arguments[0] == "yesterday":
-					sql += " WHERE Timestamp > BETWEEN datetime('now', '-1 days') AND datetime('now', 'start of day')"
+					sql += " WHERE Timestamp BETWEEN datetime('now', '-1 days') AND datetime('now', 'start of day')"
 			}
 
 		}
