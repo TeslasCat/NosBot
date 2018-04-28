@@ -4,7 +4,7 @@ import (
     "../../types"
 )
 
-func Handle (message types.Message) types.Response {
+func Handle (message *types.Message) types.Response {
     var response = types.Response{}
 
     response.Message = echo(message.Message)

@@ -28,6 +28,7 @@ type Message struct {
     Private bool
     Command string
     Arguments []string
+    Replied bool
 }
 
 type Response struct {

@@ -7,11 +7,11 @@ import (
 
 
 type Channel struct {
-    History []types.Message
+    History []*types.Message
 }
 
 type User struct {
-    Message types.Message
+    Message *types.Message
 }
 
 var channels map[string]*Channel
@@ -23,11 +23,11 @@ func init() {
     users = make(map[string]*User)
 }
 
-func Handle (message types.Message) types.Response {
+func Handle (message *types.Message) types.Response {
     var response types.Response
 
     if message.Command == "seen" {
-        last, error := GetUserHistory(message.Arguments[0])
+        last, error := GetUserLatest(message.Arguments[0])
         if error == "" {
             response.Message = fmt.Sprintf("%s was seen in %s at %s: %s", last.Nick, last.Channel, last.Timestamp, last.Original)
         } else {
@@ -36,8 +36,8 @@ func Handle (message types.Message) types.Response {
     }
 
 
-    // Don't record private messages
-    if message.Private {
+    // Don't record private messages or commands
+    if message.Private || message.Replied {
         return response
     }
 
@@ -56,10 +56,20 @@ func Handle (message types.Message) types.Response {
     return response
 }
 
-func GetUserHistory(nick string) (*types.Message, string) {
+func GetUserLatest(nick string) (*types.Message, string) {
     if _, exists := users[nick]; !exists {
         return nil, "Nick not found"
     }
 
-    return &users[nick].Message, ""
+    return users[nick].Message, ""
+}
+
+func GetChannelLatest(channel string) (*types.Message, string) {
+    if _, exists := channels[channel]; !exists {
+        return nil, "No channel history found"
+    }
+
+    history := channels[channel].History
+
+    return history[len(history)-1], ""
 }

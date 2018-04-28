@@ -81,23 +81,19 @@ func main() {
 		var response types.Response
 		for _, module := range conf.Modules {
 			if module == "notes" {
-				response = notes.Handle(message)
-				handleResponse(response, message)
+				response = notes.Handle(&message)
+				handleResponse(response, &message)
 			}
 
 			if module == "replace" {
-				response = replace.Handle(message)
-				handleResponse(response, message)
-			}
-
-
-
-			// History module needs to be last
-			if module == "history" {
-				response = history.Handle(message)
-				handleResponse(response, message)
+				response = replace.Handle(&message)
+				handleResponse(response, &message)
 			}
 		}
+
+		// History module is required
+		response = history.Handle(&message)
+		handleResponse(response, &message)
 	})
 
 	// Connect to server
@@ -108,10 +104,12 @@ func main() {
 	}
 }
 
-func handleResponse(response types.Response, original types.Message) {
+func handleResponse(response types.Response, original *types.Message) {
 	if len(response.Messages) == 0 && response.Message == "" {
 		return
 	}
+
+	original.Replied = true
 
 	if response.Target == "" {
 		if original.Private {

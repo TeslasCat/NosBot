@@ -17,7 +17,7 @@ type Note struct {
 	Note string
 }
 
-func Handle (message types.Message) types.Response {
+func Handle (message *types.Message) types.Response {
 	var response types.Response
 
 	switch {
@@ -30,7 +30,7 @@ func Handle (message types.Message) types.Response {
 	return response
 }
 
-func new (message types.Message) types.Response {
+func new (message *types.Message) types.Response {
 	response := types.Response{}
 
 	db, err := sql.Open("sqlite3", "./notes.db")
