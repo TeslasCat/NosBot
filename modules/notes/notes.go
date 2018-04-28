@@ -57,7 +57,7 @@ func new (message types.Message) types.Response {
 	}
 
 	response.Type = "action"
-	response.Messages = []string{"adds to list"}
+	response.Message = "adds to list"
 	return response
 }
 
@@ -90,7 +90,7 @@ func list (arguments []string) types.Response {
 	rows, err := db.Query(sql)
 	if err != nil {
 		log.Printf("Notes Module: ", err)
-		response.Messages = []string{"{red}No Notes"}
+		response.Message = "{red}No Notes"
 		return response
 	}
 

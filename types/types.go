@@ -23,6 +23,7 @@ type Message struct {
     Nick string
     Channel string
     Message string
+    Original string
     Timestamp string
     Private bool
     Command string
@@ -32,5 +33,6 @@ type Message struct {
 type Response struct {
     Type string     // action, message
     Target string
+    Message string
     Messages []string
 }

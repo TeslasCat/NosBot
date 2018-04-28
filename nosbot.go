@@ -12,6 +12,7 @@ import (
 	"./types"
 	"./modules/notes"
 	"./modules/replace"
+	"./modules/history"
 )
 
 var client *girc.Client
@@ -52,6 +53,7 @@ func main() {
 		message := types.Message{}
 		message.Nick = e.Source.Name
 		message.Message = e.Trailing
+		message.Original = e.Trailing
 		message.Timestamp = e.Timestamp.String()
 
 		if len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
@@ -80,12 +82,20 @@ func main() {
 		for _, module := range conf.Modules {
 			if module == "notes" {
 				response = notes.Handle(message)
-				handleResponse(response, message);
+				handleResponse(response, message)
 			}
 
 			if module == "replace" {
 				response = replace.Handle(message)
-				handleResponse(response, message);
+				handleResponse(response, message)
+			}
+
+
+
+			// History module needs to be last
+			if module == "history" {
+				response = history.Handle(message)
+				handleResponse(response, message)
 			}
 		}
 	})
@@ -99,7 +109,7 @@ func main() {
 }
 
 func handleResponse(response types.Response, original types.Message) {
-	if len(response.Messages) == 0 {
+	if len(response.Messages) == 0 && response.Message == "" {
 		return
 	}
 
@@ -114,12 +124,20 @@ func handleResponse(response types.Response, original types.Message) {
 	}
 
 	if (response.Type == "action") {
-		for _, message := range response.Messages {
-			client.Cmd.Action(response.Target, message)
+		if response.Message != "" {
+			client.Cmd.Action(response.Target, response.Message)
+		} else {
+			for _, message := range response.Messages {
+				client.Cmd.Action(response.Target, message)
+			}
 		}
 	} else {
-		for _, message := range response.Messages {
-			client.Cmd.Message(response.Target, message)
+		if response.Message != "" {
+			client.Cmd.Message(response.Target, response.Message)
+		} else {
+			for _, message := range response.Messages {
+				client.Cmd.Message(response.Target, message)
+			}
 		}
 	}
 }

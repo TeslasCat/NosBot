@@ -7,7 +7,7 @@ import (
 func Handle (message types.Message) types.Response {
     var response = types.Response{}
 
-    response.Messages = []string{echo(message.Message)}
+    response.Message = echo(message.Message)
 
     return response
 }
