@@ -8,6 +8,10 @@ import (
 	"encoding/json"
 	"crypto/tls"
 	"github.com/lrstanley/girc"
+	"../mautrix-go"
+	"flag"
+	"fmt"
+	"time"
 
 	"./types"
 	"./modules"
@@ -17,7 +21,8 @@ import (
 	_ "./modules/seen"
 )
 
-var client *girc.Client
+var ircClient *girc.Client
+var matrixClient *mautrix.MatrixBot
 
 func main() {
 
@@ -27,8 +32,87 @@ func main() {
 		log.Printf("Printing Configuration file: \n%+v\n", conf)
 	}
 
+	// Setup matrix client
+	var homeserver = flag.String("homeserver", "https://tak.lward.co.uk", "Macak homeserver")
+	var username = flag.String("username", conf.MatrixUser, "Matrix username localpart")
+	var password = flag.String("password", conf.MatrixPassword, "Matrix password")
+
+	matrixClient = mautrix.Create(*homeserver)
+	err := matrixClient.PasswordLogin(*username, *password)
+	if err != nil {
+		panic(err)
+	}
+
+	// err = matrixClient.Join(conf.MatrixRoom)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	stop := make(chan bool, 1)
+	go matrixClient.Listen()
+	go func() {
+	Loop:
+		for {
+			select {
+			case <-stop:
+				break Loop
+			case evt := <-matrixClient.Timeline:
+				evt.MarkRead()
+				switch evt.Type {
+				case mautrix.EvtRoomMessage:
+					if (evt.Type == "m.room.message") {
+						log.Print(evt);
+
+						message := types.Message{}
+						message.Nick = evt.Sender
+						message.Message = evt.Content["body"].(string)
+						message.Original = evt.Content["body"].(string)
+						message.Channel = evt.Room.ID
+						message.Timestamp = time.Now().String()
+						message.Platform = "matrix"
+
+						// Split out command and arguments
+						regex := regexp.MustCompile(`^!(\S+)(?: (.+))?$`)
+						matches := regex.FindStringSubmatch(message.Message)
+
+						// Extract command
+						if len(matches) > 1 && matches[1] != "" {
+							message.Command = matches[1]
+						}
+
+						// Build arguments list
+						if len(matches) > 2 && matches[2] != "" {
+							message.Message = strings.TrimSpace(matches[2]) // trim command from message
+							message.Arguments = strings.Split(strings.TrimSpace(matches[2]), " ")
+						}
+
+						// Loop loaded modules
+						var response types.Response
+						for _, module := range conf.Modules {
+							response = modules.Get(module)(&message)
+							handleResponse(response, &message)
+						}
+
+						// History module is required
+						history.Handle(&message)
+					} else {
+						fmt.Printf("<%[1]s> %[4]s (%[2]s/%[3]s)\n", evt.Sender, evt.Type, evt.ID, evt.Content["body"])
+					}
+				default:
+					fmt.Println("Unidentified event of type", evt.Type)
+				}
+			case roomID := <-matrixClient.InviteChan:
+				invite := matrixClient.Invites[roomID]
+				fmt.Printf("%s invited me to %s (%s)\n", invite.Sender, invite.Name, invite.ID)
+				fmt.Println(invite.Accept())
+			}
+		}
+		matrixClient.Stop()
+	}()
+
+
 	// Configure connection
-	client = girc.New(girc.Config{
+	ircClient = girc.New(girc.Config{
 		Server: 		conf.Server,
 		Port:   		conf.Port,
 		Nick:   		conf.Nick,
@@ -41,7 +125,7 @@ func main() {
 	})
 
 	// Handlers
-	client.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
+	ircClient.Handlers.Add(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
 		log.Printf("Connected to %s (%s) as nick '%s'", c.Server(), c.ServerVersion(), c.GetNick())
 
 		for _, channel := range conf.Channels {
@@ -51,12 +135,13 @@ func main() {
 	})
 
 
-	client.Handlers.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
+	ircClient.Handlers.Add(girc.PRIVMSG, func(c *girc.Client, e girc.Event) {
 		message := types.Message{}
 		message.Nick = e.Source.Name
 		message.Message = e.Trailing
 		message.Original = e.Trailing
-		message.Timestamp = e.Timestamp.String()
+		message.Timestamp = time.Now().String()
+		message.Platform = "irc"
 
 		if len(e.Params) > 0 && girc.IsValidChannel(e.Params[0]) {
 			message.Channel = e.Params[0]
@@ -91,9 +176,9 @@ func main() {
 	})
 
 	// Connect to server
-	if err := client.Connect(); err != nil {
-		log.Printf("Error: %s on Server: %s", err, client.Server())
-		_, time := client.Uptime()
+	if err := ircClient.Connect(); err != nil {
+		log.Printf("Error: %s on Server: %s", err, ircClient.Server())
+		_, time := ircClient.Uptime()
 		log.Printf("%s", time)
 	}
 }
@@ -115,20 +200,27 @@ func handleResponse(response types.Response, original *types.Message) {
 	    }
 	}
 
-	if (response.Type == "action") {
-		if response.Message != "" {
-			client.Cmd.Action(response.Target, response.Message)
-		} else {
-			for _, message := range response.Messages {
-				client.Cmd.Action(response.Target, message)
+	var room *mautrix.Room
+	if (original.Platform == "matrix") {
+		room = matrixClient.GetRoom(response.Target)
+	}
+
+	if len(response.Messages) == 0 {
+		response.Messages = append(response.Messages, response.Message)
+	}
+
+	for _, message := range response.Messages {
+		if (original.Platform == "matrix") {
+			if (response.Type == "action") {
+				room.Emote(message);
+			} else {
+				room.Send(message);
 			}
-		}
-	} else {
-		if response.Message != "" {
-			client.Cmd.Message(response.Target, response.Message)
 		} else {
-			for _, message := range response.Messages {
-				client.Cmd.Message(response.Target, message)
+			if (response.Type == "action") {
+				ircClient.Cmd.Action(response.Target, message)
+			} else {
+				ircClient.Cmd.Message(response.Target, message)
 			}
 		}
 	}

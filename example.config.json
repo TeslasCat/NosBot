@@ -5,6 +5,9 @@
 	"user":"TestBot",
 	"nickserv":"password",
 
+    "matrixUser": "nosbot",
+    "matrixPassword": "",
+
 	"debug": false,
 	"port": 6697,
 	"secure": true,

@@ -17,6 +17,8 @@ type Config struct {
     // Greeting       []string `json:"greeting"`
     // GreetingIgnore []string `json:"greeting-ignore"`
     Modules       []string `json:"modules"`
+    MatrixUser      string `json:"matrixUser"`
+    MatrixPassword  string `json:"matrixPassword"`
 }
 
 type Message struct {
@@ -29,6 +31,7 @@ type Message struct {
     Command string
     Arguments []string
     Replied bool
+    Platform string
 }
 
 type Response struct {
