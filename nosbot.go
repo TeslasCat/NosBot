@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"crypto/tls"
 	"github.com/lrstanley/girc"
-	"../mautrix-go"
+	"./lib/mautrix-go"
 	"flag"
 	"fmt"
 	"time"
@@ -19,21 +19,22 @@ import (
 	_ "./modules/notes"
 	_ "./modules/replace"
 	_ "./modules/seen"
+	_ "./modules/ping"
 )
 
+var conf types.Config
 var ircClient *girc.Client
 var matrixClient *mautrix.MatrixBot
 
 func main() {
-
-	conf := loadConfig()
+	conf = loadConfig()
 
 	if conf.Debug {
 		log.Printf("Printing Configuration file: \n%+v\n", conf)
 	}
 
 	// Setup matrix client
-	var homeserver = flag.String("homeserver", "https://tak.lward.co.uk", "Macak homeserver")
+	var homeserver = flag.String("homeserver", conf.MatrixServer, "Macak homeserver")
 	var username = flag.String("username", conf.MatrixUser, "Matrix username localpart")
 	var password = flag.String("password", conf.MatrixPassword, "Matrix password")
 
@@ -42,11 +43,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	// err = matrixClient.Join(conf.MatrixRoom)
-	// if err != nil {
-	// 	panic(err)
-	// }
 
 	stop := make(chan bool, 1)
 	go matrixClient.Listen()
@@ -71,30 +67,9 @@ func main() {
 						message.Timestamp = time.Now().String()
 						message.Platform = "matrix"
 
-						// Split out command and arguments
-						regex := regexp.MustCompile(`^!(\S+)(?: (.+))?$`)
-						matches := regex.FindStringSubmatch(message.Message)
+						log.Print(message)
 
-						// Extract command
-						if len(matches) > 1 && matches[1] != "" {
-							message.Command = matches[1]
-						}
-
-						// Build arguments list
-						if len(matches) > 2 && matches[2] != "" {
-							message.Message = strings.TrimSpace(matches[2]) // trim command from message
-							message.Arguments = strings.Split(strings.TrimSpace(matches[2]), " ")
-						}
-
-						// Loop loaded modules
-						var response types.Response
-						for _, module := range conf.Modules {
-							response = modules.Get(module)(&message)
-							handleResponse(response, &message)
-						}
-
-						// History module is required
-						history.Handle(&message)
+						handleMessage(message)
 					} else {
 						fmt.Printf("<%[1]s> %[4]s (%[2]s/%[3]s)\n", evt.Sender, evt.Type, evt.ID, evt.Content["body"])
 					}
@@ -149,30 +124,7 @@ func main() {
 			message.Private = true
 		}
 
-		// Split out command and arguments
-		regex := regexp.MustCompile(`^!(\S+)(?: (.+))?$`)
-		matches := regex.FindStringSubmatch(message.Message)
-
-		// Extract command
-		if len(matches) > 1 && matches[1] != "" {
-			message.Command = matches[1]
-		}
-
-		// Build arguments list
-		if len(matches) > 2 && matches[2] != "" {
-			message.Message = strings.TrimSpace(matches[2]) // trim command from message
-			message.Arguments = strings.Split(strings.TrimSpace(matches[2]), " ")
-		}
-
-		// Loop loaded modules
-		var response types.Response
-		for _, module := range conf.Modules {
-			response = modules.Get(module)(&message)
-			handleResponse(response, &message)
-		}
-
-		// History module is required
-		history.Handle(&message)
+		handleMessage(message)
 	})
 
 	// Connect to server
@@ -182,6 +134,36 @@ func main() {
 		log.Printf("%s", time)
 	}
 }
+
+func handleMessage(message types.Message) {
+	// Split out command and arguments
+	regex := regexp.MustCompile(`^!(\S+)(?: (.+))?$`)
+	matches := regex.FindStringSubmatch(message.Message)
+
+	// Extract command
+	if len(matches) > 1 && matches[1] != "" {
+		message.Command = matches[1]
+	}
+
+	// Build arguments list
+	if len(matches) > 2 && matches[2] != "" {
+		message.Message = strings.TrimSpace(matches[2]) // trim command from message
+		message.Arguments = strings.Split(strings.TrimSpace(matches[2]), " ")
+	}
+
+	// Loop loaded modules
+	var response types.Response
+	for _, module := range conf.Modules {
+		log.Print(module)
+		log.Print(message)
+		response = modules.Get(module)(&message)
+		handleResponse(response, &message)
+	}
+
+	// History module is required
+	history.Handle(&message)
+}
+
 
 func handleResponse(response types.Response, original *types.Message) {
 	if len(response.Messages) == 0 && response.Message == "" {

@@ -17,6 +17,7 @@ type Config struct {
     // Greeting       []string `json:"greeting"`
     // GreetingIgnore []string `json:"greeting-ignore"`
     Modules       []string `json:"modules"`
+    MatrixServer    string `json:"matrixServer"`
     MatrixUser      string `json:"matrixUser"`
     MatrixPassword  string `json:"matrixPassword"`
 }
